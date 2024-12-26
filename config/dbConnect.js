@@ -2,9 +2,7 @@ const { default: mongoose } = require("mongoose");
 
 const dbConnect = () => {
   try {
-    const conn = mongoose.connect(
-      "mongodb+srv://tourdulich:bon13052002@cluster0.k4cp9.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0"
-    );
+    const conn = mongoose.connect(process.env.MONGO_URI);
 
     console.log("Database connect successfully");
   } catch (error) {
