@@ -4,7 +4,7 @@ const userModel = require("../models/userModel.js");
 const asyncHandle = require("express-async-handler");
 const jwt = require("jsonwebtoken");
 const crypto = require("crypto");
-const bcrypt = require("bcrypt");
+const bcrypt = require('bcryptjs');
 require("dotenv").config();
 const axios = require("axios");
 
