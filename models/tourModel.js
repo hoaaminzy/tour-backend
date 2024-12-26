@@ -47,8 +47,8 @@ const tourDetailSchema = new mongoose.Schema(
     },
     images: [{ type: String }],
     inforTourDetail: {
-      type: [inforTourDetailSchema], 
-      required: true, 
+      type: [inforTourDetailSchema],
+      required: true,
     },
     vehicle: {
       type: String,
@@ -70,5 +70,19 @@ const tourDetailSchema = new mongoose.Schema(
   },
   { timestamps: true }
 );
+
+tourDetailSchema.statics.removeOldTours = async function () {
+  const currentDate = new Date();
+  await this.updateMany(
+    {},
+    {
+      $pull: {
+        inforTourDetail: {
+          "time.startDate": { $lt: currentDate.toISOString().split("T")[0] },
+        },
+      },
+    }
+  );
+};
 
 module.exports = mongoose.model("tourDetail", tourDetailSchema);

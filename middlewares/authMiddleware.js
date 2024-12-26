@@ -1,40 +1,34 @@
-const userModel = require('../models/userModel.js')
-const jwt = require('jsonwebtoken')
-const passport = require('passport');
-const { genarateToken } = require('../config/jwtToken.js')
+const userModel = require("../models/userModel.js");
+const jwt = require("jsonwebtoken");
+const passport = require("passport");
 
-
-//  day la phan quyen 
+//  day la phan quyen
 // tạo user
-const authMiddleware = (async(req,res,next)=>{
-    let token // khởi tạo
-    if(req?.headers?.authorization?.startsWith('Bearer')){ // true
-        token = req.headers.authorization.split(" ")[1]
-        try {
-            if(token){
-                const decoded = jwt.verify(token,"SECRET") // truyền vào biến môi trường .env
-                console.log(decoded) //lấy được dữ liệu của token
-                const user = await userModel.findById(decoded?.id) // tạo user bằng với giá trị id vừa đc lấy 
-                req.user = user // tạo mới phương thức user
-                next() // đi tiếp
-            }
-        } catch (error) {
-            res.status(500).send("Not authorization token expired, please login again")
-        }
-    }else{
-        res.status(500).send("There is no token attanded to header")
-    }
-})
+// middleware/auth.js
 
-const isAdmin =async (req, res, next) => {
-    const {email} = req.user
-    const adminUser = await userModel.findOne({email})
-    if(adminUser.role !=='admin'){ // nếu khác admin thì ko được qua
-        res.send({message:"you are not an admin"})
-    }else{
-        next()
-    }
-    // console.log(email)
-}
+const authenticateToken = (req, res, next) => {
+  const token = req.headers.authorization?.split(" ")[1];
+  if (!token) return res.status(401).json({ message: "Token is required" });
 
-module.exports = {authMiddleware,isAdmin}
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    req.user = { id: decoded.userId, email: decoded.email, role: decoded.role };
+    next();
+  } catch (error) {
+    return res.status(403).json({ message: "Invalid or expired token" });
+  }
+};
+
+const isAdmin = async (req, res, next) => {
+  const { email } = req.user;
+  const adminUser = await userModel.findOne({ email });
+  if (adminUser.role !== "admin") {
+    // nếu khác admin thì ko được qua
+    res.send({ message: "you are not an admin" });
+  } else {
+    next();
+  }
+  // console.log(email)
+};
+
+module.exports = { authenticateToken, isAdmin };

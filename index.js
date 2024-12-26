@@ -17,6 +17,11 @@ const emailRoute = require("./routes/emailRoute");
 const blogRoute = require("./routes/blogRoute");
 const assignStaffRoute = require("./routes/staffAssignmentRoute");
 const tourBigRoute = require("./routes/tourBigRoute");
+const discountCodeRoute = require("./routes/discountCodeRoute");
+
+const vnpayRoute = require("./routes/vnPayRoute");
+const cron = require("node-cron");
+const tourModel = require("./models/tourModel");
 const crypto = require("crypto");
 const axios = require("axios");
 const multer = require("multer");
@@ -32,7 +37,40 @@ const path = require("path");
 app.use(express.json({ limit: "50mb" })); // Phân tích JSON
 app.use(express.urlencoded({ limit: "50mb", extended: false })); // Phân tích URL-encoded
 
-app.use(cors());
+const allowedOrigins = ["http://localhost:3000", "http://localhost:3001"];
+
+// Thiết lập cron job chạy mỗi ngày lúc 00:00
+// mm:hh d/m/w
+cron.schedule("56 10 * * *", async () => {
+  try {
+    await tourModel.removeOldTours();
+    console.log("Old tours removed successfully");
+  } catch (error) {
+    console.error("Error removing old tours:", error);
+  }
+});
+
+(async () => {
+  try {
+    await tourModel.removeOldTours();
+    console.log("Old tours removed successfully");
+  } catch (error) {
+    console.error("Error removing old tours:", error);
+  }
+})();
+
+app.use(
+  cors({
+    origin: function (origin, callback) {
+      if (allowedOrigins.includes(origin) || !origin) {
+        callback(null, true);
+      } else {
+        callback(new Error("Not allowed by CORS"));
+      }
+    },
+  })
+);
+
 app.use(morgan("dev"));
 app.use(cookieParser());
 
@@ -41,7 +79,7 @@ const config = {
   secretKey: "K951B6PE1waDMi640xX08PD3vg6EkVlz",
   orderInfo: "Thanh toán tour với MoMo",
   partnerCode: "MOMO",
-  redirectUrl: "http://localhost:3000/",
+  redirectUrl: "http://localhost:3000/trang-chu",
   ipnUrl:
     "https://1b9b-2402-800-629c-95f3-e0cf-d597-e064-3a9f.ngrok-free.app/callback",
   requestType: "captureWallet",
@@ -382,7 +420,10 @@ app.use("/api/contacts", contactRoute);
 app.use("/api/email", emailRoute);
 app.use("/api/blogs", blogRoute);
 app.use("/api/assignStaff", assignStaffRoute);
+app.use("/api/discountCode", discountCodeRoute);
 
-app.listen(PORT, () => {
+app.use("/api/vnpay", vnpayRoute);
+
+app.listen(PORT, "0.0.0.0", () => {
   console.log(`Server is running at PORT ${PORT}`);
 });

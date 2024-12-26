@@ -6,7 +6,27 @@ const jwt = require("jsonwebtoken");
 const crypto = require("crypto");
 const bcrypt = require("bcrypt");
 require("dotenv").config();
+const axios = require("axios");
 
+// const verifyCaptcha = async (captchaToken) => {
+//   const secretKey = "6Ld2AZEqAAAAAMq3lFhGUVyohYfg6C8b6poo70_8"; // Replace with your reCAPTCHA secret key
+//   const url = `https://www.google.com/recaptcha/api/siteverify`;
+
+//   try {
+//     const response = await axios.post(
+//       url,
+//       new URLSearchParams({
+//         secret: secretKey,
+//         response: captchaToken,
+//       })
+//     );
+
+//     return response.data.success; // Returns true if CAPTCHA is valid
+//   } catch (error) {
+//     console.error("CAPTCHA verification failed:", error);
+//     return false;
+//   }
+// };
 // create user
 const signUpUser = async (req, res) => {
   const { email, displayName, phoneNumber, address, password, isStaff } =
@@ -37,17 +57,25 @@ const signUpUser = async (req, res) => {
   }
 };
 const loginUser = async (req, res) => {
-  const { email, password } = req.body;
+  const { email, password, captchaToken } = req.body;
 
   try {
+    // const isCaptchaValid = await verifyCaptcha(captchaToken);
+    // if (!isCaptchaValid) {
+    //   return res.status(400).json({ message: "CAPTCHA không hợp lệ." });
+    // }
     const user = await userModel.findOne({ email });
     if (!user) {
-      return res.status(400).json({ message: "Invalid email or password" });
+      return res
+        .status(400)
+        .json({ message: "Mật khẩu hoặc email không hợp lệ !" });
     }
 
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
-      return res.status(400).json({ message: "Invalid email or password" });
+      return res
+        .status(400)
+        .json({ message: "Mật khẩu hoặc email không hợp lệ !" });
     }
 
     if (user.role !== "user") {
@@ -56,7 +84,6 @@ const loginUser = async (req, res) => {
         .json({ message: "Access denied. Only users can login." });
     }
 
-    // Generate JWT token
     const token = jwt.sign(
       { userId: user._id, email: user.email, role: user.role },
       process.env.JWT_SECRET,
@@ -71,15 +98,26 @@ const loginUser = async (req, res) => {
   }
 };
 
+const getMe = async (req, res) => {
+  try {
+    const user = await userModel.findById(req.user.id).select("-password");
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    res.json(user);
+  } catch (error) {
+    res.status(500).json({ message: "Error fetching user info", error });
+  }
+};
+
 const updateUser = async (req, res) => {
   const userId = req.params.id;
-  const { email, displayName, address, phoneNumber } = req.body;
+  const { displayName, address, phoneNumber } = req.body;
 
   try {
     // Find the user by ID and update specific fields
     const updatedUser = await userModel.findByIdAndUpdate(
       userId,
-      { email, displayName, address, phoneNumber },
+      { displayName, address, phoneNumber },
       {
         new: true, // Return the updated document
         runValidators: true, // Run validation based on model schema
@@ -120,17 +158,21 @@ const loginAdmin = async (req, res) => {
   try {
     const user = await userModel.findOne({ email });
     if (!user) {
-      return res.status(401).json({ message: "Invalid email or password" });
+      return res
+        .status(401)
+        .json({ message: "Mật khẩu hoặc email không hợp lệ !" });
     }
 
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
-      return res.status(401).json({ message: "Invalid email or password" });
+      return res
+        .status(401)
+        .json({ message: "Mật khẩu hoặc email không hợp lệ !" });
     }
 
     const token = jwt.sign(
       { userId: user._id, role: user.role },
-      "yourSecretKey",
+      process.env.JWT_SECRET,
       {
         expiresIn: "1h",
       }
@@ -332,6 +374,7 @@ module.exports = {
   updateUser,
   deleteUser,
   loginAdmin,
+  getMe,
   // handleRefreshToken,
   // logout,
   // updatePassword,

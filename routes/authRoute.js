@@ -12,15 +12,18 @@ const {
   updateUser,
   deleteUser,
   loginAdmin,
+  getMe,
 } = require("../controllers/userController");
+const { authenticateToken } = require("../middlewares/authMiddleware");
 
 route.post("/signup", signUpUser);
 route.post("/login", loginUser);
 route.get("/get-all-users", getAllUsers);
-route.get("/get-all-users", getAllUsers);
+// route.get("/get-all-users", getAllUsers);
 route.delete("/delete-user/:id", deleteUser);
 route.put("/update-user/:id", updateUser);
 route.post("/login-admin", loginAdmin);
+route.get("/me", authenticateToken, getMe);
 
 // route.post("/admin-login", loginAdmin);
 

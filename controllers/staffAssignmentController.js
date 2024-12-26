@@ -2,19 +2,21 @@ const StaffAssignment = require("../models/staffAssignmentModel");
 const historyStaffAssignment = require("../models/historyStaffAssignment");
 // API để gán nhân viên cho tour
 const assignStaff = async (req, res) => {
-  const { staffId, staffName, tourId, tourDetailId } = req.body;
+  const { staffId, staffName, tourId, tourDetailId, bookingId } = req.body;
 
   try {
     // Kiểm tra xem nhân viên đã được gán cho tour này chưa
     let existingAssignment = await StaffAssignment.findOne({
       tourId,
       tourDetailId,
+      bookingId,
     });
 
     if (existingAssignment) {
       // Nếu có gán rồi, chỉ cần cập nhật thông tin nhân viên
       existingAssignment.staffId = staffId;
       existingAssignment.staffName = staffName;
+      existingAssignment.bookingId = bookingId;
 
       const updatedAssignment = await existingAssignment.save();
       return res.status(200).json({
@@ -29,6 +31,7 @@ const assignStaff = async (req, res) => {
       staffName,
       tourId,
       tourDetailId,
+      bookingId,
     });
 
     const savedAssignment = await newAssignment.save();
@@ -87,6 +90,7 @@ const unassignStaff = async (req, res) => {
       tourId,
       tourDetailId,
       staffId,
+      // bookingId,
     });
 
     if (!assignment) {
@@ -101,10 +105,11 @@ const unassignStaff = async (req, res) => {
 
 const hisStaffAssignment = async (req, res) => {
   const { HSA, staff } = req.body;
+  const { password, ...staffWithoutPassword } = staff;
   try {
     const newHSA = new historyStaffAssignment({
       HSA,
-      staff,
+      staff: staffWithoutPassword,
     });
 
     const savedHSA = await newHSA.save();
@@ -113,10 +118,29 @@ const hisStaffAssignment = async (req, res) => {
     console.log(error);
   }
 };
+
+const getAllHistoryStaffAss = async (req, res) => {
+  try {
+    const historyStaffAssignments = await historyStaffAssignment.find({});
+    res.status(200).json({
+      historyStaffAssignments,
+      success: true,
+      message: "Fetched all staff assignments successfully",
+    });
+  } catch (error) {
+    console.log(error);
+    res.status(500).json({
+      message: "Error fetching staff assignments",
+      success: false,
+      error: error,
+    });
+  }
+};
 module.exports = {
   assignStaff,
   getAllStaffAssignment,
   updateStaffAssignment,
   unassignStaff,
   hisStaffAssignment,
+  getAllHistoryStaffAss,
 };

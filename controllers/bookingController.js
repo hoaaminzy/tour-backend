@@ -1,16 +1,15 @@
 const bookingModel = require("../models/bookingModel");
+const discountCodeModel = require("../models/discountCodeModel");
 const tourModel = require("../models/tourModel");
 const addBooking = async (req, res) => {
   // const { _id } = req.user;
-  const { passengers, tourId, tourDetail } = req.body;
+  const { passengers, tourId, tourDetail, discount } = req.body;
   try {
     const tour = await tourModel.findById(tourId);
-    console.log("tour",tour);
     const slotsNeeded =
       passengers.slotBaby + passengers.slotChildren + passengers.slotAdult;
 
     const tourDetails = tour.inforTourDetail.id(tourDetail[0]._id);
-    console.log("tourDeital",tourDetails);
     if (tourDetails.slot < slotsNeeded) {
       return res.status(400).json({ message: "Not enough slots available" });
     }
@@ -18,17 +17,24 @@ const addBooking = async (req, res) => {
       ...req.body,
       // updateBy: _id,
     });
-    
+
     tourDetails.slot -= slotsNeeded;
+
+    const updateDiscount = await discountCodeModel.findOne({ code: discount });
+    if (updateDiscount) {
+      updateDiscount.quantity -= 1;
+      await updateDiscount.save();
+    } else {
+      console.log("Không tìm thấy mã giảm giá");
+    }
+
     await tour.save();
 
     res.status(201).send({
       newBooking: newBooking,
       success: true,
-      message: "Create new booking successfully",
+      message: "Đặt tour thành công",
     });
-
-    console.log("Booking new", newBooking);
   } catch (error) {
     console.log(error);
     res.status(500).send({
@@ -110,7 +116,36 @@ const cancelTour = async (req, res) => {
   const { id } = req.params;
 
   try {
-    await bookingModel.findByIdAndDelete(id); // Xóa booking theo ObjectId
+    // Lấy thông tin booking trước khi xóa
+    const booking = await bookingModel.findById(id);
+    if (!booking) {
+      return res.status(404).json({ message: "Booking không tồn tại." });
+    }
+
+    const { passengers, tourId, tourDetail } = booking;
+    const slotsToRestore =
+      passengers.slotBaby + passengers.slotChildren + passengers.slotAdult;
+
+    // Tìm tour theo tourId
+    const tour = await tourModel.findById(tourId);
+    if (!tour) {
+      return res.status(404).json({ message: "Tour không tồn tại." });
+    }
+
+    // Tìm tourDetails dựa trên tourDetail[0]._id
+    if (booking.status === "Chờ xác nhận") {
+      const tourDetails = tour.inforTourDetail.id(tourDetail[0]._id);
+      if (!tourDetails) {
+        return res.status(404).json({ message: "TourDetail không tồn tại." });
+      }
+      // Khôi phục lại số slot
+      tourDetails.slot = +tourDetails.slot + slotsToRestore;
+
+      await tour.save();
+    }
+
+    // Xóa booking
+    await bookingModel.findByIdAndDelete(id);
 
     return res.status(200).json({ message: "Hủy và xóa tour thành công." });
   } catch (error) {

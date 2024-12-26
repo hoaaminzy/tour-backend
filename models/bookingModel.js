@@ -55,7 +55,7 @@ const bookingSchema = new mongoose.Schema(
     },
     selectedPayment: {
       type: String,
-      enum: ["cash", "bank", "momo"],
+      enum: ["cash", "bank", "momo", "vnpay"],
     },
     totalPrice: {
       type: String,
@@ -71,6 +71,10 @@ const bookingSchema = new mongoose.Schema(
     payment: {
       type: [paymentSchema],
       default: [],
+    },
+    discount: {
+      type: String,
+      default: null,
     },
   },
   { timestamps: true }

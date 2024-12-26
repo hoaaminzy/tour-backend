@@ -5,8 +5,8 @@ const StaffAssignmentSchema = new mongoose.Schema({
   staffName: String,
   tourId: String,
   tourDetailId: String,
+  bookingId: String,
   assignedAt: { type: Date, default: Date.now },
 });
 
-module.exports = mongoose.model("StaffAssignment",
- StaffAssignmentSchema);
+module.exports = mongoose.model("StaffAssignment", StaffAssignmentSchema);
